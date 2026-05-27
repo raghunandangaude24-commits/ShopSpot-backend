@@ -9,7 +9,6 @@ exports.register = async (req, res) => {
         const { name, email, password } = req.body;
 
         /* ===== VALIDATION ===== */
-
         if (!name || !email || !password) {
             return res.status(400).json({
                 success: false,
@@ -18,7 +17,6 @@ exports.register = async (req, res) => {
         }
 
         /* ===== CHECK USER ===== */
-
         const existingUser = await User.findOne({ email });
 
         if (existingUser) {
@@ -29,20 +27,24 @@ exports.register = async (req, res) => {
         }
 
         /* ===== HASH PASSWORD ===== */
-
         const hashedPassword = await bcrypt.hash(password, 10);
 
         /* ===== CREATE USER ===== */
-
         const user = await User.create({
             name,
             email,
             password: hashedPassword
         });
 
-        /* ===== RESPONSE ===== */
+        /* ===== GENERATE TOKEN SAFELY ===== */
+        const token = generateToken(user._id);
 
-        res.status(201).json({
+        if (!token) {
+            throw new Error("Token generation failed (check JWT_SECRET)");
+        }
+
+        /* ===== RESPONSE ===== */
+        return res.status(201).json({
             success: true,
             message: "User registered successfully",
             user: {
@@ -50,15 +52,15 @@ exports.register = async (req, res) => {
                 name: user.name,
                 email: user.email
             },
-            token: generateToken(user._id)
+            token
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("REGISTER ERROR:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            message: "Server Error"
+            message: error.message || "Server Error"
         });
     }
 };
@@ -70,7 +72,6 @@ exports.login = async (req, res) => {
         const { email, password } = req.body;
 
         /* ===== VALIDATION ===== */
-
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -79,7 +80,6 @@ exports.login = async (req, res) => {
         }
 
         /* ===== FIND USER ===== */
-
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -90,7 +90,6 @@ exports.login = async (req, res) => {
         }
 
         /* ===== CHECK PASSWORD ===== */
-
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
@@ -100,9 +99,15 @@ exports.login = async (req, res) => {
             });
         }
 
-        /* ===== RESPONSE ===== */
+        /* ===== GENERATE TOKEN SAFELY ===== */
+        const token = generateToken(user._id);
 
-        res.status(200).json({
+        if (!token) {
+            throw new Error("Token generation failed (check JWT_SECRET)");
+        }
+
+        /* ===== RESPONSE ===== */
+        return res.status(200).json({
             success: true,
             message: "Login successful",
             user: {
@@ -110,15 +115,15 @@ exports.login = async (req, res) => {
                 name: user.name,
                 email: user.email
             },
-            token: generateToken(user._id)
+            token
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("LOGIN ERROR:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            message: "Server Error"
+            message: error.message || "Server Error"
         });
     }
 };
