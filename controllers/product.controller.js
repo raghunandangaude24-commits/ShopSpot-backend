@@ -4,7 +4,6 @@ const Product = require("../models/Product");
 exports.getProducts = async (req, res) => {
     try {
         const products = await Product.find().sort({ createdAt: -1 });
-
         res.json(products);
 
     } catch (err) {
@@ -33,17 +32,18 @@ exports.getSingleProduct = async (req, res) => {
 /* ================= ADD PRODUCT ================= */
 exports.addProduct = async (req, res) => {
     try {
-        const { name, price, image, description } = req.body;
+        const { name, price, image, description, category } = req.body;
 
-        if (!name || !price || !image) {
-            return res.status(400).json({ message: "Name, price, image required" });
+        if (!name || !price || !image || !category) {
+            return res.status(400).json({ message: "Name, price, image, category required" });
         }
 
         const product = await Product.create({
             name,
             price,
             image,
-            description
+            description,
+            category: category.toLowerCase().trim()   // ✅ FIX
         });
 
         res.status(201).json({
@@ -60,7 +60,7 @@ exports.addProduct = async (req, res) => {
 /* ================= UPDATE PRODUCT ================= */
 exports.updateProduct = async (req, res) => {
     try {
-        const { name, price, image, description } = req.body;
+        const { name, price, image, description, category } = req.body;
 
         const product = await Product.findByIdAndUpdate(
             req.params.id,
@@ -68,7 +68,8 @@ exports.updateProduct = async (req, res) => {
                 name,
                 price,
                 image,
-                description
+                description,
+                category: category?.toLowerCase().trim()   // ✅ FIX
             },
             {
                 new: true,
