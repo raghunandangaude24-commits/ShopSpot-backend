@@ -62,4 +62,35 @@ router.post("/", auth, async (req, res) => {
     }
 });
 
+/* ================= GET CART (🔥 THIS WAS MISSING) ================= */
+
+router.get("/", auth, async (req, res) => {
+    try {
+
+        const userId =
+            req.user.id ||
+            req.user._id ||
+            req.user.userId;
+
+        const cart = await Cart.findOne({ userId })
+            .populate("items.productId");
+
+        if (!cart) {
+            return res.json({
+                items: []
+            });
+        }
+
+        res.json({
+            items: cart.items
+        });
+
+    } catch (err) {
+        console.log("GET CART ERROR:", err);
+        res.status(500).json({
+            message: "Server error while fetching cart"
+        });
+    }
+});
+
 module.exports = router;
