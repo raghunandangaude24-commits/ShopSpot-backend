@@ -28,14 +28,11 @@ router.post("/", auth, async (req, res) => {
         let cart = await Cart.findOne({ userId });
 
         if (!cart) {
-            cart = new Cart({
-                userId,
-                items: []
-            });
+            cart = new Cart({ userId, items: [] });
         }
 
         const existingItem = cart.items.find(
-            item => item.productId?.toString() === productId
+            i => i.productId?.toString() === productId
         );
 
         if (existingItem) {
@@ -55,14 +52,12 @@ router.post("/", auth, async (req, res) => {
         });
 
     } catch (err) {
-        console.log("CART ERROR:", err);
-        res.status(500).json({
-            message: "Server error while adding to cart"
-        });
+        console.log("ADD CART ERROR:", err);
+        res.status(500).json({ message: "Server error" });
     }
 });
 
-/* ================= GET CART (🔥 THIS WAS MISSING) ================= */
+/* ================= GET CART ================= */
 
 router.get("/", auth, async (req, res) => {
     try {
@@ -76,9 +71,7 @@ router.get("/", auth, async (req, res) => {
             .populate("items.productId");
 
         if (!cart) {
-            return res.json({
-                items: []
-            });
+            return res.json({ items: [] });
         }
 
         res.json({
@@ -87,9 +80,90 @@ router.get("/", auth, async (req, res) => {
 
     } catch (err) {
         console.log("GET CART ERROR:", err);
-        res.status(500).json({
-            message: "Server error while fetching cart"
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+/* ================= UPDATE QUANTITY (+ / -) ================= */
+
+router.put("/update/:productId", auth, async (req, res) => {
+    try {
+
+        const userId =
+            req.user.id ||
+            req.user._id ||
+            req.user.userId;
+
+        const { productId } = req.params;
+        const { change } = req.body;
+
+        const cart = await Cart.findOne({ userId });
+
+        if (!cart) {
+            return res.status(404).json({ message: "Cart not found" });
+        }
+
+        const item = cart.items.find(
+            i => i.productId.toString() === productId
+        );
+
+        if (!item) {
+            return res.status(404).json({ message: "Item not found" });
+        }
+
+        item.quantity += change;
+
+        if (item.quantity <= 0) {
+            cart.items = cart.items.filter(
+                i => i.productId.toString() !== productId
+            );
+        }
+
+        await cart.save();
+
+        res.json({
+            message: "Cart updated",
+            cart
         });
+
+    } catch (err) {
+        console.log("UPDATE ERROR:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+/* ================= REMOVE ITEM ================= */
+
+router.delete("/remove/:productId", auth, async (req, res) => {
+    try {
+
+        const userId =
+            req.user.id ||
+            req.user._id ||
+            req.user.userId;
+
+        const { productId } = req.params;
+
+        const cart = await Cart.findOne({ userId });
+
+        if (!cart) {
+            return res.status(404).json({ message: "Cart not found" });
+        }
+
+        cart.items = cart.items.filter(
+            i => i.productId.toString() !== productId
+        );
+
+        await cart.save();
+
+        res.json({
+            message: "Item removed",
+            cart
+        });
+
+    } catch (err) {
+        console.log("REMOVE ERROR:", err);
+        res.status(500).json({ message: "Server error" });
     }
 });
 
