@@ -5,10 +5,16 @@ const mongoose = require("mongoose");
 const auth = require("../middleware/auth.middleware");
 const Cart = require("../models/Cart");
 
+/* ================= ADD TO CART ================= */
+
 router.post("/", auth, async (req, res) => {
     try {
 
-        const userId = req.user.id;
+        const userId =
+            req.user.id ||
+            req.user._id ||
+            req.user.userId;
+
         const { productId } = req.body;
 
         if (!productId) {
@@ -21,7 +27,6 @@ router.post("/", auth, async (req, res) => {
 
         let cart = await Cart.findOne({ userId });
 
-        // CREATE CART IF NOT EXISTS
         if (!cart) {
             cart = new Cart({
                 userId,
@@ -29,9 +34,8 @@ router.post("/", auth, async (req, res) => {
             });
         }
 
-        // CHECK IF PRODUCT ALREADY EXISTS
         const existingItem = cart.items.find(
-            item => item.productId.toString() === productId
+            item => item.productId?.toString() === productId
         );
 
         if (existingItem) {
